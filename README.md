@@ -76,18 +76,19 @@ from the Administration section.
 ### Automatic deployment to Tomcat
 
 The `main` branch is built and deployed automatically by
-`.github/workflows/deploy.yml`. The workflow uses the Tomcat Manager text API
-at `http://92.222.25.165:10040/`.
+`.github/workflows/deploy.yml`. The workflow deploys the WAR through the
+Tomcat Manager text API over HTTPS.
 
 Configure these GitHub repository secrets before enabling the workflow:
 
-- `TOMCAT_USERNAME`: a Tomcat Manager user with permission to deploy.
+- `TOMCAT_USER`: a Tomcat user with the `manager-script` role.
 - `TOMCAT_PASSWORD`: the corresponding password.
 - `APP_ENV`: the complete production `.env` content, including `DB_HOST`,
   `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 
-The application is deployed under the `/workshop-management` context.
-Do not put Tomcat credentials in the repository or in `.env`.
+The application is deployed at the root context `/`, so it is available at
+the root of the configured domain. Do not put Tomcat credentials or database
+credentials in the repository or in `.env`.
 
 ### License
 
@@ -173,19 +174,20 @@ les objectifs de production et les tâches depuis la section Administration.
 ### Déploiement automatique sur Tomcat
 
 La branche `main` est compilée et déployée automatiquement par
-`.github/workflows/deploy.yml`. Le workflow utilise l'API texte Tomcat Manager
-à l'adresse `http://92.222.25.165:10040/`.
+`.github/workflows/deploy.yml`. Le workflow déploie le WAR via l'API texte
+Tomcat Manager en HTTPS.
 
 Configurez ces secrets dans les paramètres du dépôt GitHub avant d'activer le
 workflow :
 
-- `TOMCAT_USERNAME` : un utilisateur Tomcat autorisé à déployer ;
+- `TOMCAT_USER` : un utilisateur Tomcat possédant le rôle `manager-script` ;
 - `TOMCAT_PASSWORD` : le mot de passe correspondant ;
 - `APP_ENV` : le contenu complet du fichier `.env` de production, avec
   `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` et `DB_PASSWORD`.
 
-L'application est déployée sous le contexte `/workshop-management`.
-Ne placez jamais les identifiants Tomcat dans le dépôt ou dans `.env`.
+L'application est déployée sous le contexte racine `/`, et sera donc
+disponible à la racine du domaine configuré. Ne placez jamais les identifiants
+Tomcat ou ceux de la base de données dans le dépôt ou dans `.env`.
 
 ### Licence
 

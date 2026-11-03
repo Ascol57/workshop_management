@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 env:
-  TOMCAT_URL: http://92.222.25.165:10040
-  APP_CONTEXT: /workshop-management
+  TOMCAT_URL: https://workshop.rusche.fr
+  APP_CONTEXT: /
 
 jobs:
   deploy:
@@ -25,7 +25,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: '21'
           cache: maven
 
       - name: Build WAR
@@ -38,28 +38,28 @@ jobs:
           printf '%s\n' "$APP_ENV" > src/main/resources/.env
           ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
 
-      - name: Deploy WAR to Tomcat Manager
+      - name: Deploy WAR through Tomcat Manager
         env:
-          TOMCAT_USERNAME: ${{ secrets.TOMCAT_USERNAME }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER }}
           TOMCAT_PASSWORD: ${{ secrets.TOMCAT_PASSWORD }}
         run: |
           set -euo pipefail
-          war_file="$(find target -maxdepth 1 -type f -name '*.war' -print -quit)"
-          test -n "$war_file"
+          test -n "$TOMCAT_USER"
+          test -n "$TOMCAT_PASSWORD"
 
           deploy_response="$(
             curl --fail-with-body --silent --show-error \
-            --user "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
-            --upload-file "$war_file" \
-            "$TOMCAT_URL/manager/text/deploy?path=$APP_CONTEXT&update=true"
+              --user "$TOMCAT_USER:$TOMCAT_PASSWORD" \
+              --upload-file target/workshop-management.war \
+              "$TOMCAT_URL/manager/text/deploy?path=$APP_CONTEXT&update=true"
           )"
           printf '%s\n' "$deploy_response"
           grep -q '^OK -' <<<"$deploy_response"
 
           list_response="$(
             curl --fail-with-body --silent --show-error \
-            --user "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
-            "$TOMCAT_URL/manager/text/list"
+              --user "$TOMCAT_USER:$TOMCAT_PASSWORD" \
+              "$TOMCAT_URL/manager/text/list"
           )"
           printf '%s\n' "$list_response"
-          grep -q "^/workshop-management:" <<<"$list_response"
+          grep -q '^/:running:' <<<"$list_response"
