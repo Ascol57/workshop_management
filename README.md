@@ -1,61 +1,159 @@
-# My Application
+# Workshop Management
 
-A Spring Boot + Vaadin project. Build your UI in pure Java — no HTML, no JavaScript.
+## English
 
-> **New to Vaadin?** The 5-minute [Quickstart](https://vaadin.com/quickstart) walks you from here to your first running app, a live code change, and an AI-assisted edit with Copilot.
+Workshop Management is a Spring Boot and Vaadin application for managing
+workshops and production planning.
 
----
+### Features
 
-## Fastest start — no plugin needed
+- Workshop, equipment, machine, product, capability, and routing management.
+- Alternative manufacturing routings for the same product.
+- Production orders with automatic decomposition into specialized goals.
+- On-demand task requests by operators.
+- Automatic machine selection based on capability, operator authorization,
+  availability, and hourly cost.
+- Operator pause, resume, and task completion workflow.
+- Interactive 2D workshop floor plan with movable and resizable machines.
+- Invitation-only account creation managed by administrators.
+- English and French user interface.
 
-From the project folder:
+### Requirements
 
-```bash
-./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
-```
+- Java 25
+- Maven (or the included Maven Wrapper)
+- MySQL
 
-Then open **http://localhost:8080**.
+### Configuration
 
-The first start takes ~30 seconds while Maven downloads dependencies.
-
-> **Port 8080 already in use?** Stop the other process, or set `server.port=8081` in `src/main/resources/application.properties` and open that port instead.
->
-> **To stop the app:** press `Ctrl+C` in the terminal (or the red Stop button if you launched from your IDE).
-
-## Optional upgrade — instant hotswap
-
-Running with `spring-boot:run` works, but Java code changes need a server restart. For **live reload** — edit Java, see it in the browser without restarting — install the **Vaadin plugin** and start the app through it:
-
-- **IntelliJ IDEA:** install *Vaadin* from the JetBrains Marketplace → **Debug using Hotswap Agent** (dropdown next to Run). *Just installed it? Let IntelliJ finish indexing, or restart it, if the menu item isn't there yet.*
-- **VS Code:** install the *Vaadin* extension → **Vaadin: Debug using Hotswap Agent** from the command palette.
-- **Eclipse:** install the *Vaadin* plugin → right-click the project → **Run As → Vaadin Application**.
-
-This is what makes the edit-and-see-it loop feel instant — and it's required for the AI edits in [Vaadin Copilot](https://vaadin.com/docs/latest/tools/copilot).
-
----
-
-## Ask your AI assistant about Vaadin (optional)
-
-If you use Claude Code, Cursor, or another AI coding assistant, connect it to the **Vaadin MCP server** so it answers against real Vaadin docs and the exact API of your installed version — instead of guessing from outdated training data.
+Copy the example environment file and fill in the database credentials:
 
 ```bash
-# One-time setup — see https://vaadin.com/docs/latest/building-apps/mcp
+cp .env.example .env
 ```
 
-A `.mcp.json` is included (commented out by default). Uncomment it, or run the setup command above, to activate.
+The application reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` (optional),
+and `DB_PASSWORD`. Never commit `.env`; it contains local credentials.
 
----
-
-## Build for production
+### Run the application
 
 ```bash
-./mvnw package
-java -jar target/*.jar
+./mvnw spring-boot:run
 ```
 
-## Learn more
+On Windows:
 
-- [Vaadin Quickstart](https://vaadin.com/quickstart) — the 5-minute getting-started path
-- [Components](https://vaadin.com/docs/latest/components) — 50+ UI components, all callable from Java
-- [Vaadin Copilot](https://vaadin.com/docs/latest/tools/copilot) — visual + AI editing in the browser
-- [Full documentation](https://vaadin.com/docs)
+```bat
+mvnw.cmd spring-boot:run
+```
+
+Open <http://localhost:8080>.
+
+Database migrations are applied by the application. The first launch provides
+the initial setup page when no user exists.
+
+### Build and package
+
+```bash
+./mvnw clean package
+java -jar target/*.war
+```
+
+### Database reset
+
+The reset command deletes all database tables and reapplies every migration.
+It is destructive and requires an explicit confirmation flag:
+
+```bash
+./mvnw compile exec:java \
+  -Dexec.mainClass=fr.ascol.database.ResetDatabaseCommand \
+  -Dexec.args=--confirm-reset
+```
+
+Administrators can also apply migrations and reset production goals and tasks
+from the Administration section.
+
+### License
+
+This project is distributed under the [MIT License](./LICENSE).
+
+## Français
+
+Workshop Management est une application Spring Boot et Vaadin de gestion
+d'ateliers et de planification de production.
+
+### Fonctionnalités
+
+- Gestion des ateliers, équipements, machines, produits, capacités et gammes.
+- Plusieurs gammes de fabrication alternatives pour un même produit.
+- Ordres de production décomposés automatiquement en objectifs spécialisés.
+- Demande de tâches à la demande par les ouvriers.
+- Choix automatique de la machine selon la capacité, les autorisations de
+  l'opérateur, la disponibilité et le coût horaire.
+- Gestion de la pause, de la reprise et de la fin des tâches.
+- Plan 2D interactif avec machines déplaçables et redimensionnables.
+- Création de comptes par invitation gérée par les administrateurs.
+- Interface disponible en anglais et en français.
+
+### Prérequis
+
+- Java 25
+- Maven (ou le Maven Wrapper inclus)
+- MySQL
+
+### Configuration
+
+Copiez le fichier d'environnement d'exemple et renseignez les identifiants
+de la base de données :
+
+```bash
+cp .env.example .env
+```
+
+L'application utilise `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` (facultatif)
+et `DB_PASSWORD`. Ne committez jamais `.env` : il contient des identifiants
+locaux.
+
+### Lancer l'application
+
+```bash
+./mvnw spring-boot:run
+```
+
+Sous Windows :
+
+```bat
+mvnw.cmd spring-boot:run
+```
+
+Ouvrez <http://localhost:8080>.
+
+Les migrations de base de données sont appliquées par l'application. Au
+premier lancement, la page de configuration initiale est affichée lorsqu'il
+n'existe encore aucun utilisateur.
+
+### Compiler et empaqueter
+
+```bash
+./mvnw clean package
+java -jar target/*.war
+```
+
+### Réinitialiser la base de données
+
+La commande de réinitialisation supprime toutes les tables puis réapplique
+toutes les migrations. Cette opération est destructive et nécessite un
+paramètre de confirmation explicite :
+
+```bash
+./mvnw compile exec:java \
+  -Dexec.mainClass=fr.ascol.database.ResetDatabaseCommand \
+  -Dexec.args=--confirm-reset
+```
+
+Les administrateurs peuvent également appliquer les migrations et réinitialiser
+les objectifs de production et les tâches depuis la section Administration.
+
+### Licence
+
+Ce projet est distribué sous [licence MIT](./LICENSE).
