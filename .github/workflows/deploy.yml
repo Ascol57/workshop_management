@@ -1,0 +1,65 @@
+name: Build and deploy to Tomcat
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TOMCAT_URL: http://92.222.25.165:10040
+  APP_CONTEXT: /workshop-management
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build WAR
+        env:
+          APP_ENV: ${{ secrets.APP_ENV }}
+        run: |
+          set -euo pipefail
+          test -n "$APP_ENV"
+          trap 'rm -f src/main/resources/.env' EXIT
+          printf '%s\n' "$APP_ENV" > src/main/resources/.env
+          ./mvnw --batch-mode --no-transfer-progress clean package -DskipTests
+
+      - name: Deploy WAR to Tomcat Manager
+        env:
+          TOMCAT_USERNAME: ${{ secrets.TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.TOMCAT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          war_file="$(find target -maxdepth 1 -type f -name '*.war' -print -quit)"
+          test -n "$war_file"
+
+          deploy_response="$(
+            curl --fail-with-body --silent --show-error \
+            --user "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+            --upload-file "$war_file" \
+            "$TOMCAT_URL/manager/text/deploy?path=$APP_CONTEXT&update=true"
+          )"
+          printf '%s\n' "$deploy_response"
+          grep -q '^OK -' <<<"$deploy_response"
+
+          list_response="$(
+            curl --fail-with-body --silent --show-error \
+            --user "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+            "$TOMCAT_URL/manager/text/list"
+          )"
+          printf '%s\n' "$list_response"
+          grep -q "^/workshop-management:" <<<"$list_response"

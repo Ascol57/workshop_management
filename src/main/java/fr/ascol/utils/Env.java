@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.io.InputStream;
 
 /**
  * Lecture de la configuration sensible (identifiants de base de données…) en
@@ -60,7 +61,7 @@ public final class Env {
     static {
         Optional<Path> trouve = chercherFichier();
         FICHIER_LU = trouve.orElse(null);
-        VALEURS = trouve.map(Env::lire).orElse(Collections.emptyMap());
+        VALEURS = trouve.map(Env::lire).orElseGet(Env::lireClasspath);
     }
 
     /** classe utilitaire : pas d'instance. */
@@ -164,6 +165,14 @@ public final class Env {
         return Optional.empty();
     }
 
+    private static Map<String, String> lireClasspath() {
+        try (InputStream flux = Env.class.getClassLoader().getResourceAsStream(NOM_FICHIER)) {
+            return flux == null ? Collections.emptyMap() : lire(flux);
+        } catch (IOException e) {
+            throw new Error("lecture impossible du fichier " + NOM_FICHIER + " dans le WAR", e);
+        }
+    }
+
     private static Map<String, String> lire(Path fichier) {
         Map<String, String> valeurs = new HashMap<>();
         try {
@@ -184,6 +193,28 @@ public final class Env {
             }
         } catch (IOException e) {
             throw new Error("lecture impossible du fichier " + fichier, e);
+        }
+        return valeurs;
+    }
+
+    private static Map<String, String> lire(InputStream flux) throws IOException {
+        Map<String, String> valeurs = new HashMap<>();
+        try (var lecteur = new java.io.BufferedReader(
+                new java.io.InputStreamReader(flux, StandardCharsets.UTF_8))) {
+            for (String ligne; (ligne = lecteur.readLine()) != null;) {
+                String reste = ligne.strip();
+                if (reste.isEmpty() || reste.startsWith("#")) {
+                    continue;
+                }
+                if (reste.startsWith("export ")) {
+                    reste = reste.substring("export ".length()).strip();
+                }
+                int separateur = reste.indexOf('=');
+                if (separateur > 0) {
+                    valeurs.put(reste.substring(0, separateur).strip(),
+                            nettoyerValeur(reste.substring(separateur + 1).strip()));
+                }
+            }
         }
         return valeurs;
     }
