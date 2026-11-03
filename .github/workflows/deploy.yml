@@ -44,8 +44,14 @@ jobs:
           TOMCAT_PASSWORD: ${{ secrets.TOMCAT_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$TOMCAT_USER"
-          test -n "$TOMCAT_PASSWORD"
+          if [[ -z "$TOMCAT_USER" ]]; then
+            echo "::error::The TOMCAT_USER repository secret is missing or empty."
+            exit 1
+          fi
+          if [[ -z "$TOMCAT_PASSWORD" ]]; then
+            echo "::error::The TOMCAT_PASSWORD repository secret is missing or empty."
+            exit 1
+          fi
 
           deploy_response="$(
             curl --fail-with-body --silent --show-error \
