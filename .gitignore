@@ -1,4 +1,19 @@
 /target/
+
+# Build artifacts
+*.war
+*.jar
+*.ear
+
+# Maven local and temporary files
+.flattened-pom.xml
+release.properties
+dependency-reduced-pom.xml
+
+# Logs and local runtime files
+*.log
+hs_err_pid*
+
 .idea/
 .vscode/
 .settings
@@ -12,3 +27,10 @@
 node_modules/
 src/main/frontend/generated/
 vite.generated.ts
+
+# configuration locale : identifiants de base de donnees
+.env
+
+# Local database and IDE caches
+*.mv.db
+*.trace.db

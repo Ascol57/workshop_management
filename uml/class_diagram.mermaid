@@ -1,0 +1,165 @@
+---
+title: Class Diagram - Workshop Management System
+---
+classDiagram
+    direction LR
+    %% ---------- Inheritance / Generalization ----------
+    Equipment <|-- Machine
+    Equipment <|-- Workstation
+    User <|-- Operator
+    User <|-- WorkshopManager
+
+    %% ---------- Associations ----------
+    Workshop "1" -- "*" User : employs
+    Workshop "1" -- "*" Equipment : contains
+    Workshop "1" -- "*" Product : manufactures
+    Workshop "1" -- "*" GeneralGoal : sets
+    Workstation "1" -- "1..*" Machine : groups
+    Product "1" -- "*" Routing : has
+    Routing "1" -- "1..*" Operation : consists of
+    Operation "*" -- "1" Equipment : runs on
+    Operator "*" -- "*" Machine : is skilled for
+    Operator "1" -- "*" Task : performs
+    GeneralGoal "1" -- "*" SpecializedGoal : decomposes into
+    SpecializedGoal "1" -- "*" Task : generates
+    Task "*" -- "1" Machine : uses
+    Task "*" -- "1" Operation : carries out
+    HTTPServer "1" -- "1" Memory : queries / updates
+    Memory "1" -- "*" User : stores
+    Memory "1" -- "*" Machine : stores
+    Memory "1" -- "*" Task : stores
+
+    %% ---------- User Classes & Connection ----------
+    class User {
+        #String userId
+        #String name
+        #String firstName
+        #String login
+        #String passwordHash
+        #Role role
+        +authenticate(String login, String password) boolean
+        +getRole() Role
+    }
+    class WorkshopManager {
+        +createGeneralGoal(Product p, int quantity) GeneralGoal
+        +assignTask(Task t, Operator op)
+        +viewStatistics()
+    }
+    class Operator {
+        +float hourlyCost
+        +OperatorStatus status
+        +List~String~ machineRefs
+        +startTask(Task t)
+        +completeTask(Task t)
+        +pause()
+    }
+    class HTTPServer {
+        +int port
+        +handleAuthentication(String login, String password)
+        +handleTaskCompletion(String taskId)
+        +handleStatusChange(OperatorStatus status)
+    }
+
+    %% ---------- Business & Equipment ----------
+
+    class Workshop {
+        +String name
+        +save(String file)
+        +load(String file)
+    }
+    class Memory {
+        +static List~Operator~ listOperators
+        +static List~Machine~ listMachines
+        +static List~GeneralGoal~ listGoals
+        +static List~Task~ listTasks
+    }
+    class Equipment {
+        <<abstract>>
+        #String equipmentRef
+        #String description
+    }
+    class Machine {
+        +String type
+        +float hourlyCost
+        +float x
+        +float y
+        +MachineStatus status
+        +getReliability() float
+    }
+    class Workstation {
+        +List~Machine~ listMachines
+        +addMachine(Machine m)
+        +removeMachine(Machine m)
+    }
+    class Product {
+        +String code
+        +String description
+        +displayProduct()
+    }
+    class Routing {
+        +String routingRef
+        +List~Operation~ listOperations
+        +List~Equipment~ listEquipment
+        +routingCost() float
+        +routingDuration() float
+        +createRouting()
+    }
+    class Operation {
+        +String operationRef
+        +String description
+        +String equipmentRef
+        +float duration
+    }
+
+    %% ---------- Goals & Tasks ----------
+    class GeneralGoal {
+        +int targetQuantity
+        +GoalStatus status
+    }
+    class SpecializedGoal {
+        +String step
+        +GoalStatus status
+    }
+    class Task {
+        +String taskId
+        +Timestamp startDate
+        +Timestamp endDate
+        +TaskStatus status
+        +close()
+    }
+
+    %% ---------- Enumerations ----------
+    class Role {
+        <<enumeration>>
+        WORKSHOP_MANAGER
+        OPERATOR
+        ADMINISTRATOR
+    }
+    class OperatorStatus {
+        <<enumeration>>
+        AVAILABLE
+        OCCUPIED
+        PAUSED
+        OFFLINE
+    }
+    class MachineStatus {
+        <<enumeration>>
+        OPERATIONAL
+        BROKEN
+        UNDER_MAINTENANCE
+        AVAILABLE
+        OCCUPIED
+    }
+    class TaskStatus {
+        <<enumeration>>
+        PENDING
+        IN_PROGRESS
+        COMPLETED
+        SUSPENDED
+    }
+    class GoalStatus {
+        <<enumeration>>
+        IN_PROGRESS
+        ACHIEVED
+        CANCELLED
+    }

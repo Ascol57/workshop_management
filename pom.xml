@@ -3,9 +3,8 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <!-- Project from https://start.vaadin.com/fe16be37-3833-4628-867b-c100dbff7148 -->
-    <groupId>fr.insa.beuvron.cours.m3</groupId>
-    <artifactId>pasapas2026</artifactId>
+    <groupId>fr.insa.crusche.projet</groupId>
+    <artifactId>workshop-management</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
@@ -68,6 +67,12 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
         </dependency>
+        <!-- BCrypt pour le hachage sécurisé des mots de passe -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
         <!-- remplace normalement la dépendance directe à HikariCP, 
          mais je veux garder la dépendance directe pour pouvoir configurer le pool de connexions
         <dependency>
@@ -106,6 +111,11 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
             </plugin>
         </plugins>
     </build>

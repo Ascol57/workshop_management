@@ -1,0 +1,144 @@
+---
+title: Workshop Management System - Relational Schema
+---
+erDiagram
+    %% ---------- Core entities ----------
+    WORKSHOP {
+        int id PK
+        varchar name "NOT NULL"
+    }
+
+    APP_USER {
+        int id PK
+        varchar name "NOT NULL"
+        varchar first_name "NOT NULL"
+        varchar login "NOT NULL, UNIQUE"
+        varchar password_hash "NOT NULL"
+        varchar role "CHECK IN (WORKSHOP_MANAGER, OPERATOR, ADMINISTRATOR)"
+        int workshop_id FK "-> workshop.id"
+    }
+
+    OPERATOR {
+        int id PK, FK "-> app_user.id"
+        float hourly_cost
+        varchar status "CHECK IN (AVAILABLE, OCCUPIED, PAUSED, OFFLINE)"
+    }
+
+    WORKSHOP_MANAGER {
+        int id PK, FK "-> app_user.id"
+    }
+
+    EQUIPMENT {
+        int id PK
+        varchar equipment_ref "NOT NULL"
+        varchar description "NOT NULL"
+        int workshop_id FK "-> workshop.id"
+    }
+
+    MACHINE {
+        int id PK, FK "-> equipment.id"
+        varchar type "NOT NULL"
+        float hourly_cost
+        float x
+        float y
+        varchar status "CHECK IN (OPERATIONAL, BROKEN, UNDER_MAINTENANCE, AVAILABLE, OCCUPIED)"
+    }
+
+    WORKSTATION {
+        int id PK, FK "-> equipment.id"
+    }
+
+    PRODUCT {
+        int id PK
+        varchar code "NOT NULL"
+        varchar description "NOT NULL"
+        int workshop_id FK "-> workshop.id"
+    }
+
+    ROUTING {
+        int id PK
+        varchar routing_ref "NOT NULL"
+        int product_id FK "-> product.id"
+    }
+
+    OPERATION {
+        int id PK
+        varchar operation_ref "NOT NULL"
+        varchar description "NOT NULL"
+        int equipment_id FK "-> equipment.id"
+        float duration
+        int routing_id FK "-> routing.id"
+    }
+
+    GENERAL_GOAL {
+        int id PK
+        int target_quantity "NOT NULL"
+        varchar status "CHECK IN (IN_PROGRESS, ACHIEVED, CANCELLED)"
+        int workshop_id FK "-> workshop.id"
+    }
+
+    SPECIALIZED_GOAL {
+        int id PK
+        varchar step "NOT NULL"
+        varchar status "CHECK IN (IN_PROGRESS, ACHIEVED, CANCELLED)"
+        int general_goal_id FK "-> general_goal.id"
+    }
+
+    TASK {
+        int id PK
+        varchar task_id "NOT NULL"
+        timestamp start_date
+        timestamp end_date
+        varchar status "CHECK IN (PENDING, IN_PROGRESS, COMPLETED, SUSPENDED)"
+        int operator_id FK "-> operator.id"
+        int machine_id FK "-> machine.id"
+        int operation_id FK "-> operation.id"
+        int specialized_goal_id FK "-> specialized_goal.id"
+    }
+
+    %% ---------- Many-to-many junction tables ----------
+    OPERATOR_MACHINE {
+        int operator_id PK, FK "-> operator.id"
+        int machine_id PK, FK "-> machine.id"
+    }
+
+    WORKSTATION_MACHINE {
+        int workstation_id PK, FK "-> workstation.id"
+        int machine_id PK, FK "-> machine.id"
+    }
+
+    ROUTING_EQUIPMENT {
+        int routing_id PK, FK "-> routing.id"
+        int equipment_id PK, FK "-> equipment.id"
+    }
+
+    %% ---------- Relationships ----------
+    WORKSHOP ||--o{ APP_USER : employs
+    WORKSHOP ||--o{ EQUIPMENT : contains
+    WORKSHOP ||--o{ PRODUCT : manufactures
+    WORKSHOP ||--o{ GENERAL_GOAL : sets
+
+    APP_USER ||--|| OPERATOR : specializes_as
+    APP_USER ||--|| WORKSHOP_MANAGER : specializes_as
+
+    EQUIPMENT ||--o{ MACHINE : is_a
+    EQUIPMENT ||--o{ WORKSTATION : is_a
+
+    PRODUCT ||--o{ ROUTING : has
+    ROUTING ||--o{ OPERATION : consists_of
+    OPERATION ||--|| EQUIPMENT : runs_on
+
+    OPERATOR ||--o{ TASK : performs
+    GENERAL_GOAL ||--o{ SPECIALIZED_GOAL : decomposes_into
+    SPECIALIZED_GOAL ||--o{ TASK : generates
+    TASK ||--|| MACHINE : uses
+    TASK ||--|| OPERATION : carries_out
+
+    OPERATOR ||--o{ OPERATOR_MACHINE : ""
+    MACHINE ||--o{ OPERATOR_MACHINE : ""
+
+    WORKSTATION ||--o{ WORKSTATION_MACHINE : ""
+    MACHINE ||--o{ WORKSTATION_MACHINE : ""
+
+    ROUTING ||--o{ ROUTING_EQUIPMENT : ""
+    EQUIPMENT ||--o{ ROUTING_EQUIPMENT : ""
