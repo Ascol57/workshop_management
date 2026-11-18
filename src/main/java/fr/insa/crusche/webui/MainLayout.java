@@ -136,6 +136,10 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver {
         produitLink.getStyle().set("display", "block");
         produitLink.getStyle().set("color", "var(--lumo-primary-text-color)");
 
+        RouterLink storageLink = new RouterLink(I18n.t("Stockage"), fr.insa.crusche.webui.StorageView.class);
+        storageLink.getStyle().set("display", "block");
+        storageLink.getStyle().set("color", "var(--lumo-primary-text-color)");
+
         RouterLink mapLink = new RouterLink(I18n.t("Plan de l'atelier"),
                 fr.insa.crusche.webui.WorkshopMapView.class);
         mapLink.getStyle().set("display", "block");
@@ -168,7 +172,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver {
         decompositionLink.getStyle().set("display", "block");
         decompositionLink.getStyle().set("color", "var(--lumo-primary-text-color)");
 
-        drawerLayout.add(atelierLink, equipementLink, machineLink, capabilityLink, produitLink, mapLink,
+        drawerLayout.add(atelierLink, equipementLink, machineLink, capabilityLink, produitLink, storageLink, mapLink,
                 routingLink, operationLink, operatorLink, generalGoalLink, decompositionLink, taskLink);
 
         if (sessionService.isLoggedIn() && sessionService.isAdmin()) {

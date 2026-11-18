@@ -67,6 +67,10 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         grid.addColumn(row -> row.get("step")).setHeader(I18n.t("Étape")).setAutoWidth(true);
         grid.addColumn(row -> row.get("operation_description"))
                 .setHeader(I18n.t("Opération")).setAutoWidth(true);
+        grid.addColumn(row -> row.get("piece_ref"))
+                .setHeader(I18n.t("Pièce")).setAutoWidth(true);
+        grid.addColumn(row -> row.get("storage_name"))
+                .setHeader(I18n.t("Emplacement")).setAutoWidth(true);
         grid.addColumn(row -> row.get("machine_name")).setHeader(I18n.t("Machine")).setAutoWidth(true);
         grid.addColumn(row -> row.get("status")).setHeader(I18n.t("Statut")).setAutoWidth(true);
         if (sessionService.canManageWorkshop()) {
@@ -90,7 +94,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
 
     private void updateStatus(int id, String status) {
         List<Map<String, Object>> assignments = DatabaseManager.query(
-            "SELECT operator_id, machine_id FROM task WHERE id = ?", id);
+            "SELECT operator_id, machine_id, piece_id, operation_id FROM task WHERE id = ?", id);
         if (assignments.isEmpty()) {
             Notification.show(I18n.t("Tâche introuvable"));
             return;
@@ -117,6 +121,7 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
                 assignment.get("machine_id"));
             DatabaseManager.update("UPDATE operator SET status = 'AVAILABLE' WHERE id = ?",
                 assignment.get("operator_id"));
+            advancePiece(assignment);
             DatabaseManager.update("""
                 UPDATE specialized_goal sg
                 JOIN general_goal g ON g.id = sg.general_goal_id
@@ -198,12 +203,24 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
             try {
                 String selectionSql = """
                     SELECT sg.id AS specialized_goal_id, op.id AS operation_id, m.id AS machine_id,
-                           o.id AS operator_id
+                           o.id AS operator_id, p.id AS piece_id, g.routing_id
                     FROM specialized_goal sg
                     JOIN general_goal g ON g.id = sg.general_goal_id
                     JOIN operation op ON op.id = sg.operation_id
                     JOIN machine_capability mc ON mc.capability_id = op.capability_id
                     JOIN machine m ON m.id = mc.machine_id
+                    JOIN piece p ON p.product_id = COALESCE(op.required_product_id, g.product_id)
+                        AND p.status = 'AVAILABLE'
+                        AND p.storage_location_id IS NOT NULL
+                        AND (p.routing_id = g.routing_id OR p.routing_id IS NULL)
+                        AND (p.current_operation_id = op.id OR (
+                            p.current_operation_id IS NULL
+                            AND op.sequence_order = (
+                                SELECT MIN(first_operation.sequence_order)
+                                FROM operation first_operation
+                                WHERE first_operation.routing_id = g.routing_id
+                            )
+                        ))
                     JOIN operator_machine om ON om.machine_id = m.id
                     JOIN operator o ON o.id = om.operator_id
                     JOIN app_user u ON u.id = o.user_id
@@ -228,6 +245,11 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
                                   AND previous_tasks.status = 'COMPLETED'
                             ) < g.target_quantity
                       )
+                      AND NOT EXISTS (
+                          SELECT 1 FROM task piece_task
+                          WHERE piece_task.piece_id = p.id
+                            AND piece_task.status IN ('PENDING', 'IN_PROGRESS')
+                      )
                       AND m.status IN ('AVAILABLE', 'OPERATIONAL')
                       AND NOT EXISTS (
                           SELECT 1 FROM task active_task
@@ -251,14 +273,17 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
                             "specialized_goal_id", result.getInt("specialized_goal_id"),
                             "operation_id", result.getInt("operation_id"),
                             "machine_id", result.getInt("machine_id"),
-                            "operator_id", result.getInt("operator_id"));
+                            "operator_id", result.getInt("operator_id"),
+                            "piece_id", result.getInt("piece_id"),
+                            "routing_id", result.getInt("routing_id"));
                     }
                 }
 
                 try (PreparedStatement insert = connection.prepareStatement("""
                     INSERT INTO task
-                        (task_id, start_date, status, operator_id, machine_id, operation_id, specialized_goal_id)
-                    VALUES (?, ?, 'IN_PROGRESS', ?, ?, ?, ?)
+                        (task_id, start_date, status, operator_id, machine_id, operation_id,
+                         specialized_goal_id, piece_id)
+                    VALUES (?, ?, 'IN_PROGRESS', ?, ?, ?, ?, ?)
                     """)) {
                     insert.setString(1, taskId);
                     insert.setTimestamp(2, now);
@@ -266,8 +291,14 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
                     insert.setInt(4, ((Number) assignment.get("machine_id")).intValue());
                     insert.setInt(5, ((Number) assignment.get("operation_id")).intValue());
                     insert.setInt(6, ((Number) assignment.get("specialized_goal_id")).intValue());
+                    insert.setInt(7, ((Number) assignment.get("piece_id")).intValue());
                     insert.executeUpdate();
                 }
+                updateWithinTransaction(connection,
+                    "UPDATE piece SET status = 'IN_TRANSFORMATION', routing_id = ?, "
+                        + "current_operation_id = ? WHERE id = ?",
+                    assignment.get("routing_id"), assignment.get("operation_id"),
+                    assignment.get("piece_id"));
                 updateWithinTransaction(connection, "UPDATE machine SET status = 'OCCUPIED' WHERE id = ?",
                     assignment.get("machine_id"));
                 updateWithinTransaction(connection, "UPDATE operator SET status = 'OCCUPIED' WHERE id = ?",
@@ -285,13 +316,41 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
         }
     }
 
-    private void updateWithinTransaction(Connection connection, String sql, Object value)
+    private void updateWithinTransaction(Connection connection, String sql, Object... values)
             throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setObject(1, value);
+            for (int index = 0; index < values.length; index++) {
+                statement.setObject(index + 1, values[index]);
+            }
             statement.executeUpdate();
         }
     }
+
+    private void advancePiece(Map<String, Object> assignment) {
+            if (assignment.get("piece_id") == null) {
+                return;
+            }
+            List<Map<String, Object>> nextOperations = DatabaseManager.query("""
+                SELECT next_operation.id
+                FROM piece current_piece
+                JOIN operation current_operation ON current_operation.id = current_piece.current_operation_id
+                JOIN operation next_operation
+                    ON next_operation.routing_id = current_operation.routing_id
+                   AND next_operation.sequence_order > current_operation.sequence_order
+                WHERE current_piece.id = ?
+                ORDER BY next_operation.sequence_order, next_operation.id
+                LIMIT 1
+                """, assignment.get("piece_id"));
+            if (nextOperations.isEmpty()) {
+                DatabaseManager.update(
+                    "UPDATE piece SET status = 'COMPLETED', current_operation_id = NULL WHERE id = ?",
+                    assignment.get("piece_id"));
+            } else {
+                DatabaseManager.update(
+                    "UPDATE piece SET status = 'AVAILABLE', current_operation_id = ? WHERE id = ?",
+                    nextOperations.get(0).get("id"), assignment.get("piece_id"));
+            }
+        }
 
     private void updateOperatorStatus(String status) {
         DatabaseManager.update("""
@@ -305,6 +364,8 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
             SELECT t.id, t.task_id, t.status, t.start_date, t.end_date,
                    sg.step, p.code AS product_code,
                    op.description AS operation_description,
+                   pce.piece_ref,
+                   sl.name AS storage_name,
                    CONCAT(m.type, ' (#', m.id, ')') AS machine_name,
                    CONCAT(u.first_name, ' ', u.name) AS operator_name
             FROM task t
@@ -312,6 +373,8 @@ public class TaskView extends VerticalLayout implements BeforeEnterObserver {
             JOIN general_goal g ON g.id = sg.general_goal_id
             LEFT JOIN product p ON p.id = g.product_id
             JOIN operation op ON op.id = t.operation_id
+            LEFT JOIN piece pce ON pce.id = t.piece_id
+            LEFT JOIN storage_location sl ON sl.id = pce.storage_location_id
             JOIN machine m ON m.id = t.machine_id
             JOIN operator o ON o.id = t.operator_id
             JOIN app_user u ON u.id = o.user_id

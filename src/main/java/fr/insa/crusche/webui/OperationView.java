@@ -42,6 +42,8 @@ public class OperationView extends VerticalLayout {
         grid.addColumn(row -> row.get("sequence_order")).setHeader(I18n.t("Ordre"));
         grid.addColumn(row -> row.get("operation_ref")).setHeader(I18n.t("Référence"));
         grid.addColumn(row -> row.get("description")).setHeader(I18n.t("Description"));
+        grid.addColumn(row -> row.get("required_product_code"))
+            .setHeader(I18n.t("Pièce nécessaire")).setAutoWidth(true);
         grid.addColumn(row -> row.get("capability_name")).setHeader(I18n.t("Capacité"));
         grid.addColumn(row -> row.get("duration")).setHeader(I18n.t("Durée"));
         grid.addComponentColumn(row -> new HorizontalLayout(
@@ -66,9 +68,11 @@ public class OperationView extends VerticalLayout {
         }
         grid.setItems(DatabaseManager.query("""
             SELECT o.id, o.sequence_order, o.operation_ref, o.description, o.duration,
+                   o.required_product_id, required_product.code AS required_product_code,
                    c.name AS capability_name
             FROM operation o
             LEFT JOIN capability c ON c.id = o.capability_id
+            LEFT JOIN product required_product ON required_product.id = o.required_product_id
             WHERE o.routing_id = ?
             ORDER BY o.sequence_order, o.id
             """, routing.getValue().get("id")));
@@ -86,17 +90,27 @@ public class OperationView extends VerticalLayout {
             "SELECT id, name FROM capability ORDER BY name");
         capability.setItems(capabilityRows);
         capability.setItemLabelGenerator(item -> String.valueOf(item.get("name")));
+        ComboBox<Map<String, Object>> requiredProduct = new ComboBox<>(I18n.t("Pièce nécessaire"));
+        List<Map<String, Object>> products = DatabaseManager.query(
+            "SELECT id, code, description FROM product ORDER BY code");
+        requiredProduct.setItems(products);
+        requiredProduct.setItemLabelGenerator(item -> item.get("code") + " - " + item.get("description"));
         reference.setWidthFull();
         reference.setReadOnly(true);
         description.setWidthFull();
         order.setWidthFull();
         duration.setWidthFull();
         capability.setWidthFull();
+        requiredProduct.setWidthFull();
         if (row != null) {
             reference.setValue(String.valueOf(row.get("operation_ref")));
             description.setValue(String.valueOf(row.get("description")));
             order.setValue(((Number) row.get("sequence_order")).doubleValue());
             duration.setValue(((Number) row.get("duration")).doubleValue());
+            products.stream()
+                .filter(item -> item.get("id").toString().equals(String.valueOf(row.get("required_product_id"))))
+                .findFirst()
+                .ifPresent(requiredProduct::setValue);
         } else {
             reference.setValue(generateReference());
             order.setValue((double) (grid.getListDataView().getItemCount() + 1));
@@ -104,28 +118,31 @@ public class OperationView extends VerticalLayout {
         }
         Button save = new Button(I18n.t("Enregistrer"), event -> {
             try {
-                if (capability.getValue() == null || routing.getValue() == null) {
+                if (capability.getValue() == null || requiredProduct.getValue() == null
+                        || routing.getValue() == null) {
                     throw new IllegalArgumentException();
                 }
                 Object[] values = {
                     reference.getValue().trim(), description.getValue().trim(),
-                    duration.getValue(), capability.getValue().get("id"), order.getValue().intValue()
+                    duration.getValue(), capability.getValue().get("id"), order.getValue().intValue(),
+                    requiredProduct.getValue().get("id")
                 };
                 if (row == null) {
                     DatabaseManager.update("""
                         INSERT INTO operation
                             (operation_ref, description, equipment_id, duration, routing_id,
-                             capability_id, machine_id, sequence_order)
-                        VALUES (?, ?, NULL, ?, ?, ?, NULL, ?)
+                             capability_id, machine_id, sequence_order, required_product_id)
+                        VALUES (?, ?, NULL, ?, ?, ?, NULL, ?, ?)
                         """, values[0], values[1], values[2], routing.getValue().get("id"),
-                        values[3], values[4]);
+                        values[3], values[4], values[5]);
                 } else {
                     DatabaseManager.update("""
                         UPDATE operation
                         SET operation_ref=?, description=?, equipment_id=NULL, duration=?,
-                            capability_id=?, machine_id=NULL, sequence_order=?
+                            capability_id=?, machine_id=NULL, sequence_order=?, required_product_id=?
                         WHERE id=?
-                        """, values[0], values[1], values[2], values[3], values[4], row.get("id"));
+                        """, values[0], values[1], values[2], values[3], values[4], values[5],
+                    row.get("id"));
                 }
                 dialog.close();
                 loadData();
@@ -134,7 +151,7 @@ public class OperationView extends VerticalLayout {
             }
         });
         save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        dialog.add(new VerticalLayout(reference, description, order, duration, capability,
+        dialog.add(new VerticalLayout(reference, description, order, duration, requiredProduct, capability,
             new HorizontalLayout(new Button(I18n.t("Annuler"), event -> dialog.close()), save)));
         dialog.open();
     }
@@ -155,7 +172,25 @@ public class OperationView extends VerticalLayout {
     }
 
     private void delete(Map<String, Object> row) {
-        DatabaseManager.update("DELETE FROM operation WHERE id = ?", row.get("id"));
-        loadData();
+        try {
+            List<Map<String, Object>> dependencies = DatabaseManager.query("""
+                SELECT
+                    (SELECT COUNT(*) FROM specialized_goal WHERE operation_id = ?) AS goals,
+                    (SELECT COUNT(*) FROM task WHERE operation_id = ?) AS tasks,
+                    (SELECT COUNT(*) FROM piece WHERE current_operation_id = ?) AS pieces
+                """, row.get("id"), row.get("id"), row.get("id"));
+            Map<String, Object> dependency = dependencies.get(0);
+            long goals = ((Number) dependency.get("goals")).longValue();
+            long tasks = ((Number) dependency.get("tasks")).longValue();
+            long pieces = ((Number) dependency.get("pieces")).longValue();
+            if (goals > 0 || tasks > 0 || pieces > 0) {
+                Notification.show(I18n.t("Impossible de supprimer une opération utilisée"));
+                return;
+            }
+            DatabaseManager.update("DELETE FROM operation WHERE id = ?", row.get("id"));
+            loadData();
+        } catch (RuntimeException exception) {
+            Notification.show(I18n.t("Impossible de supprimer cette opération"));
+        }
     }
 }

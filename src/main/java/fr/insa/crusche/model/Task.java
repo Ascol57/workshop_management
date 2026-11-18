@@ -17,6 +17,7 @@ public class Task {
     private int machineId;
     private int operationId;
     private int specializedGoalId;
+    private int pieceId;
 
     public Task() {
     }
@@ -105,5 +106,13 @@ public class Task {
 
     public void setSpecializedGoalId(int specializedGoalId) {
         this.specializedGoalId = specializedGoalId;
+    }
+
+    public int getPieceId() {
+        return pieceId;
+    }
+
+    public void setPieceId(int pieceId) {
+        this.pieceId = pieceId;
     }
 }

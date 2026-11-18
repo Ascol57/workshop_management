@@ -12,6 +12,7 @@ public class Operation {
     private float duration;
     private int equipmentId;
     private int routingId;
+    private Integer requiredProductId;
 
     public Operation() {
     }
@@ -80,5 +81,13 @@ public class Operation {
 
     public void setRoutingId(int routingId) {
         this.routingId = routingId;
+    }
+
+    public Integer getRequiredProductId() {
+        return requiredProductId;
+    }
+
+    public void setRequiredProductId(Integer requiredProductId) {
+        this.requiredProductId = requiredProductId;
     }
 }

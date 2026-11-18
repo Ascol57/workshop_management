@@ -30,6 +30,7 @@ public final class I18n {
         Map.entry("Ateliers", "Workshops"),
         Map.entry("Machines", "Machines"),
         Map.entry("Produits", "Products"),
+        Map.entry("Stockage", "Storage"),
         Map.entry("Tâches", "Tasks"),
         Map.entry("Actualiser", "Refresh"),
         Map.entry("Identifiant", "Username"),
@@ -154,6 +155,9 @@ public final class I18n {
         ,Map.entry("Machine compatible", "Compatible machine")
         ,Map.entry("Ajouter une opération", "Add an operation")
         ,Map.entry("Modifier l'opération", "Edit operation")
+        ,Map.entry("Impossible de supprimer une opération utilisée",
+            "Unable to delete an operation that is in use")
+        ,Map.entry("Impossible de supprimer cette opération", "Unable to delete this operation")
         ,Map.entry("Durée", "Duration")
         ,Map.entry("Opérateurs", "Operators")
         ,Map.entry("Utilisateur", "User")
@@ -210,6 +214,32 @@ public final class I18n {
             "Resume work before requesting a task")
         ,Map.entry("Tâche introuvable", "Task not found")
         ,Map.entry("Plan de l'atelier", "Workshop floor plan")
+        ,Map.entry("Stockage et pièces", "Storage and pieces")
+        ,Map.entry("Ajouter un emplacement", "Add storage location")
+        ,Map.entry("Ajouter une pièce", "Add piece")
+        ,Map.entry("Référence pièce", "Piece reference")
+        ,Map.entry("Pièce", "Piece")
+        ,Map.entry("Pièce nécessaire", "Required piece")
+        ,Map.entry("Définir une capacité", "Set capacity")
+        ,Map.entry("Capacité maximale", "Maximum capacity")
+        ,Map.entry("Illimité", "Unlimited")
+        ,Map.entry("La capacité est inférieure au stock actuel",
+            "Capacity is lower than current stock")
+        ,Map.entry("Commander des pièces", "Order pieces")
+        ,Map.entry("Approvisionner", "Supply")
+        ,Map.entry("Commander", "Order")
+        ,Map.entry("Préfixe des références", "Reference prefix")
+        ,Map.entry("Commande enregistrée", "Order recorded")
+        ,Map.entry("Réceptionner", "Receive")
+        ,Map.entry("Réceptionner la pièce", "Receive piece")
+        ,Map.entry("La capacité est insuffisante", "Storage capacity is insufficient")
+        ,Map.entry("Besoins de pièces primaires", "Primary piece requirements")
+        ,Map.entry("Pièce primaire", "Primary piece")
+        ,Map.entry("Besoin", "Required")
+        ,Map.entry("Stock disponible", "Available stock")
+        ,Map.entry("À commander", "To order")
+        ,Map.entry("Emplacement", "Location")
+        ,Map.entry("Impossible de supprimer cette pièce", "Unable to delete this piece")
     );
 
     private I18n() {

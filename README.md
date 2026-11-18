@@ -8,6 +8,8 @@ workshops and production planning.
 ### Features
 
 - Workshop, equipment, machine, product, capability, and routing management.
+- Physical piece and storage-location management, with exclusive piece
+  reservation during transformations.
 - Alternative manufacturing routings for the same product.
 - Production orders with automatic decomposition into specialized goals.
 - On-demand task requests by operators.
@@ -102,6 +104,8 @@ d'ateliers et de planification de production.
 ### Fonctionnalités
 
 - Gestion des ateliers, équipements, machines, produits, capacités et gammes.
+- Gestion des pièces physiques et des emplacements de stockage, avec
+  réservation exclusive d'une pièce pendant sa transformation.
 - Plusieurs gammes de fabrication alternatives pour un même produit.
 - Ordres de production décomposés automatiquement en objectifs spécialisés.
 - Demande de tâches à la demande par les ouvriers.

@@ -55,6 +55,22 @@ erDiagram
         int workshop_id FK "-> workshop.id"
     }
 
+    STORAGE_LOCATION {
+        int id PK
+        varchar name "NOT NULL"
+        int workshop_id FK "-> workshop.id"
+    }
+
+    PIECE {
+        int id PK
+        varchar piece_ref "NOT NULL, UNIQUE"
+        int product_id FK "-> product.id"
+        int storage_location_id FK "-> storage_location.id"
+        int routing_id FK "-> routing.id"
+        int current_operation_id FK "-> operation.id"
+        varchar status "CHECK IN (AVAILABLE, IN_TRANSFORMATION, COMPLETED)"
+    }
+
     ROUTING {
         int id PK
         varchar routing_ref "NOT NULL"
@@ -94,6 +110,7 @@ erDiagram
         int machine_id FK "-> machine.id"
         int operation_id FK "-> operation.id"
         int specialized_goal_id FK "-> specialized_goal.id"
+        int piece_id FK "-> piece.id"
     }
 
     %% ---------- Many-to-many junction tables ----------
@@ -116,6 +133,7 @@ erDiagram
     WORKSHOP ||--o{ APP_USER : employs
     WORKSHOP ||--o{ EQUIPMENT : contains
     WORKSHOP ||--o{ PRODUCT : manufactures
+    WORKSHOP ||--o{ STORAGE_LOCATION : contains
     WORKSHOP ||--o{ GENERAL_GOAL : sets
 
     APP_USER ||--|| OPERATOR : specializes_as
@@ -125,6 +143,8 @@ erDiagram
     EQUIPMENT ||--o{ WORKSTATION : is_a
 
     PRODUCT ||--o{ ROUTING : has
+    PRODUCT ||--o{ PIECE : instantiates
+    STORAGE_LOCATION ||--o{ PIECE : stores
     ROUTING ||--o{ OPERATION : consists_of
     OPERATION ||--|| EQUIPMENT : runs_on
 
@@ -133,6 +153,7 @@ erDiagram
     SPECIALIZED_GOAL ||--o{ TASK : generates
     TASK ||--|| MACHINE : uses
     TASK ||--|| OPERATION : carries_out
+    TASK ||--|| PIECE : transforms
 
     OPERATOR ||--o{ OPERATOR_MACHINE : ""
     MACHINE ||--o{ OPERATOR_MACHINE : ""
